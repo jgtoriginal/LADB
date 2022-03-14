@@ -1,59 +1,59 @@
 package com.draco.ladb.views
 
-import android.app.Activity
-import android.content.Intent
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
-import android.widget.EditText
-import androidx.activity.viewModels
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.RecyclerView
+import android.content.pm.ApplicationInfo
+import android.graphics.drawable.Drawable
+import android.util.Log
+import android.widget.ArrayAdapter
+import android.widget.ListView
+import android.widget.Toast
+import androidx.activity.viewModels
 import com.draco.ladb.R
-import com.draco.ladb.viewmodels.BookmarksActivityViewModel
+import com.draco.ladb.viewmodels.MainActivityViewModel
+
 
 class BookmarksActivity: AppCompatActivity() {
-    private val viewModel: BookmarksActivityViewModel by viewModels()
-    private lateinit var recycler: RecyclerView
-    private lateinit var initialText: String
+    lateinit var listView: ListView
+    private val viewModel: MainActivityViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_bookmarks)
-        recycler = findViewById(R.id.recycler)
+        setContentView(R.layout.list_view)
+        title = "Installed Apps"
+        listView = findViewById(R.id.listView)
+        installedApps()
 
-        initialText = intent.getStringExtra(Intent.EXTRA_TEXT) ?: ""
-
-        viewModel.prepareRecycler(this, recycler)
-        viewModel.recyclerAdapter.pickHook = {
-            val intent = Intent()
-                .putExtra(Intent.EXTRA_TEXT, it)
-            setResult(Activity.RESULT_OK, intent)
-            finish()
-        }
-
-        viewModel.recyclerAdapter.deleteHook = {
-            viewModel.areYouSure(this) { viewModel.recyclerAdapter.delete(it) }
-        }
-
-        viewModel.recyclerAdapter.editHook = { viewModel.edit(this, it) }
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.add -> {
-                viewModel.add(this, initialText)
-                initialText = ""
-                true
-            }
-
-            else -> super.onOptionsItemSelected(item)
+        listView.setOnItemClickListener(){adapterView, view, position, id ->
+            val itemAtPos = adapterView.getItemAtPosition(position)
+            val itemIdAtPos = adapterView.getItemIdAtPosition(position)
+            val text = "pm uninstall -k --user 0 $itemAtPos"
+            viewModel.adb.sendToShellProcess(text)
+            this.recreate()
+            Toast.makeText(this, "Click on item at $itemAtPos its item id $itemIdAtPos", Toast.LENGTH_LONG).show()
         }
     }
+    private fun installedApps() {
+        val list = packageManager.getInstalledPackages(0)
+        var appList = arrayOf<String?>()
+        var title = arrayOf<String>()
+        var description = arrayOf<String>()
+        var imageId = arrayOf<Drawable>()
+        for (i in list.indices) {
+            val packageInfo = list[i]
+//            if (packageInfo!!.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM == 0) {
+                val appName = packageInfo.applicationInfo.loadLabel(packageManager).toString()
+                val appIcon = packageInfo.applicationInfo.loadIcon(packageManager)
+                val packageName = packageInfo.applicationInfo.packageName.toString()
+                Log.e("App List$i", appIcon.toString())
+                appList += "$appName-$packageName"
+                title += appName
+                description += packageName
+                imageId += appIcon
+//            }
+        }
 
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.bookmarks, menu)
-        return true
+        val myListAdapter = AppListAdapter(this,description,title,imageId)
+        listView.adapter = myListAdapter
     }
 }
