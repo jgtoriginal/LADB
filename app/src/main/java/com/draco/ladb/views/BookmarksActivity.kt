@@ -2,10 +2,8 @@ package com.draco.ladb.views
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import android.content.pm.ApplicationInfo
 import android.graphics.drawable.Drawable
 import android.util.Log
-import android.widget.ArrayAdapter
 import android.widget.ListView
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -53,7 +51,7 @@ class BookmarksActivity: AppCompatActivity() {
 //            }
         }
 
-        val myListAdapter = AppListAdapter(this,description,title,imageId)
-        listView.adapter = myListAdapter
+//        val myListAdapter = AppListAdapter(this, description, title, imageId)
+//        listView.adapter = myListAdapter
     }
 }

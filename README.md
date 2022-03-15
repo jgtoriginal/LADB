@@ -33,3 +33,8 @@ Thanks to Surge1223 for compiling ADB for the ARM/ARM64 architecture.
 While this project is GPLv3 licensed, I would like to add an additional parameter: please do not publish unofficial (user) LADB builds to the Google Play Store.
 
 Still confused? Email me at tylernij@gmail.com.
+
+# adb over wifi pre 11
+https://stackoverflow.com/questions/4893953/run-install-debug-android-applications-over-wi-fi#answer-10236938
+
+
