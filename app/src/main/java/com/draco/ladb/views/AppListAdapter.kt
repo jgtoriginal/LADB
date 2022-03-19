@@ -9,13 +9,10 @@ import com.draco.ladb.R
 
 class AppListAdapter(
     private val context: Activity,
-    private val title: Array<String>,
-    private val description: Array<String>,
-    private val imgId: Array<Drawable>,
-    deleteApp: (input: String) -> Unit
+    private val appList: Array<AppRow>,
+    private val deleteApp: (input: String, position: Int) -> Unit
 )
-    : ArrayAdapter<String>(context, R.layout.list_row, title) {
-    val deleteApp = deleteApp
+    : ArrayAdapter<AppRow>(context, R.layout.list_row, appList) {
 
     override fun getView(position: Int, view: View?, parent: ViewGroup): View {
         val inflater = context.layoutInflater
@@ -25,15 +22,15 @@ class AppListAdapter(
         val imageView = rowView.findViewById(R.id.app_icon) as ImageView
         val subtitleText = rowView.findViewById(R.id.app_package) as TextView
 
-        titleText.text = title[position]
+        titleText.text = appList[position].title
 
-        imageView.setImageDrawable(imgId[position])
-        subtitleText.text = description[position]
+        imageView.setImageDrawable(appList[position].imageId)
+        subtitleText.text = appList[position].description
 
         val deleteButton = rowView.findViewById(R.id.delete_button) as Button
 
         deleteButton.setOnClickListener {
-            deleteApp(title[position])
+            deleteApp(appList[position].title, position)
         }
 
         return rowView
