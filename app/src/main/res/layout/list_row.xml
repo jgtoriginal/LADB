@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
+    android:padding="10dp"
     android:orientation="horizontal">
 
     <ImageView
@@ -12,18 +14,20 @@
         android:scaleType="centerCrop" />
 
     <LinearLayout
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="fill_parent"
         android:gravity="center_vertical"
         android:orientation="vertical"
         android:layout_weight="0.8"
-        android:paddingLeft="5dp">
+        android:paddingStart="15dp"
+        tools:ignore="RtlSymmetry">
 
         <TextView
             android:id="@+id/app_name"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
+            android:textSize="17sp"
             android:textStyle="bold" />
 
         <TextView
@@ -37,6 +41,7 @@
         android:id="@+id/delete_button"
         android:layout_width="100dp"
         android:layout_height="wrap_content"
-        android:text="Delete" />
+        android:text="@string/deleteButton"
+        android:textStyle="bold" />
 
 </LinearLayout>
