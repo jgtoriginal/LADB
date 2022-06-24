@@ -3,6 +3,7 @@ package com.draco.ladb.views
 import android.content.pm.PackageInfo
 import android.graphics.drawable.Drawable
 import android.os.Bundle
+import android.text.format.Formatter.formatShortFileSize
 import android.util.Log
 import android.widget.ListView
 import android.widget.Toast
@@ -10,11 +11,15 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import com.draco.ladb.R
 import com.draco.ladb.viewmodels.MainActivityViewModel
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.*
 
 data class AppRow(
     val title:String,
     val description:String,
-    val imageId:Drawable
+    val imageId:Drawable,
+    val packageId:String,
 )
 class MainActivity : AppCompatActivity() {
     private lateinit var listView: ListView
@@ -31,9 +36,11 @@ class MainActivity : AppCompatActivity() {
         installedApps(list)
     }
 
-    fun deleteApp(input: String, position: Int) {
+    private fun deleteApp(input: String, position: Int) {
         val cmd = "pm uninstall -k --user 0 $input"
         viewModel.adb.sendToShellProcess(cmd)
+
+        Log.e("cmd ==>", "$cmd, $position")
 
         list.removeAt(position)
         installedApps(list)
@@ -43,15 +50,24 @@ class MainActivity : AppCompatActivity() {
 
     private fun installedApps(list: List<PackageInfo>) {
         var appList = arrayOf<AppRow>()
+
         for (i in list.indices) {
             val packageInfo = list[i]
 //            if (packageInfo!!.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM == 0) {
-            val title = packageInfo.applicationInfo.packageName.toString()
-            val description = packageInfo.applicationInfo.loadLabel(packageManager).toString()
-            val imageId = packageInfo.applicationInfo.loadIcon(packageManager)
+            if (packageInfo!!.applicationInfo.category !== 0) {
+                val title = packageInfo.applicationInfo.loadLabel(packageManager).toString()
 
-            appList += AppRow(title, description, imageId)
-//            }
+
+                val installedDate = SimpleDateFormat("dd/MM/yy").format(Date(packageInfo!!.firstInstallTime)).toString()
+                val file = File(packageInfo!!.applicationInfo.publicSourceDir)
+                val fileSize = formatShortFileSize(this, file.length())
+
+                val description = "$installedDate, $fileSize"
+                val imageId = packageInfo.applicationInfo.loadIcon(packageManager)
+                val packageId = packageInfo.applicationInfo.packageName.toString()
+
+                appList += AppRow(title, description, imageId, packageId)
+            }
         }
 
         myListAdapter = AppListAdapter(this, appList, ::deleteApp)

@@ -30,7 +30,7 @@ class AppListAdapter(
         val deleteButton = rowView.findViewById(R.id.delete_button) as Button
 
         deleteButton.setOnClickListener {
-            deleteApp(appList[position].title, position)
+            deleteApp(appList[position].packageId, position)
         }
 
         return rowView
