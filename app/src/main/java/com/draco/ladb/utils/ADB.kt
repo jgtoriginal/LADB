@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.preference.PreferenceManager
@@ -97,8 +96,6 @@ class ADB(private val context: Context) {
         val secureSettingsGranted =
             context.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
 
-        Log.e("autoWireless =>", "$autoWireless")
-        Log.e("secureSettingsGranted =>", "$secureSettingsGranted")
         if (autoWireless) {
             debug("Enabling wireless debugging")
             if (secureSettingsGranted) {
@@ -265,11 +262,8 @@ class ADB(private val context: Context) {
      * Send commands directly to the shell process
      */
     fun sendToShellProcess(msg: String) {
-        Log.e("cmd=>", "$msg")
-        if (shellProcess == null || shellProcess?.outputStream == null) {
-            Log.e("cmd=>", "LPM $shellProcess, ${shellProcess?.outputStream}")
+        if (shellProcess == null || shellProcess?.outputStream == null)
             return
-        }
 
         PrintStream(shellProcess!!.outputStream!!).apply {
             println(msg)
