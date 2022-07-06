@@ -1,7 +1,7 @@
 package com.draco.ladb.views
 
 import android.app.Activity
-import android.graphics.drawable.Drawable
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
@@ -34,5 +34,9 @@ class AppListAdapter(
         }
 
         return rowView
+    }
+
+    fun filter(searchText: String) {
+        appList.filter { e -> searchText.lowercase() in e.title.lowercase() }
     }
 }

@@ -14,7 +14,7 @@
     <application
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.LADB"
         android:extractNativeLibs="true"
@@ -33,6 +33,7 @@
                 <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
+
         <activity android:name=".views.HelpActivity" android:label="@string/help" />
         <activity android:name=".views.BookmarksActivity" android:label="@string/bookmarks" />
 

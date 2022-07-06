@@ -5,7 +5,10 @@ import android.content.pm.PackageInfo
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.text.format.Formatter.formatShortFileSize
+import android.util.Log
+import android.view.Menu
 import android.widget.ListView
+import android.widget.SearchView
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -34,7 +37,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.list_view)
         viewModel.adb.initializeClient()
-        title = "Installed Apps"
         listView = findViewById(R.id.listView)
         list = packageManager.getInstalledPackages(0)
         installedApps(list)
@@ -62,24 +64,48 @@ class MainActivity : AppCompatActivity() {
 
         for (i in list.indices) {
             val packageInfo = list[i]
-            if (packageInfo!!.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM == 0) {
-//            if (packageInfo!!.applicationInfo.category !== 0) {
+//            if (packageInfo!!.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM == 0) {
+            if (packageInfo!!.applicationInfo.category !== 0) {
                 val title = packageInfo.applicationInfo.loadLabel(packageManager).toString()
-
+                val pkgName = packageInfo.applicationInfo.packageName
 
                 val installedDate = SimpleDateFormat("dd/MM/yy").format(Date(packageInfo!!.firstInstallTime)).toString()
                 val file = File(packageInfo!!.applicationInfo.publicSourceDir)
                 val fileSize = formatShortFileSize(this, file.length())
 
-                val description = "$installedDate, $fileSize"
+                val description = "$installedDate, $fileSize, $pkgName"
                 val imageId = packageInfo.applicationInfo.loadIcon(packageManager)
                 val packageId = packageInfo.applicationInfo.packageName.toString()
 
-                appList += AppRow(title, description, imageId, packageId)
+                if(pkgName.contains("contact")) {
+                    appList += AppRow(title, description, imageId, packageId)
+                }
             }
         }
 
         myListAdapter = AppListAdapter(this, appList, ::deleteApp)
         listView.adapter = myListAdapter
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.search, menu)
+
+        val search = menu?.findItem(R.id.search_bar)
+        val searchView = search?.actionView as SearchView
+        searchView.queryHint = "Search"
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                return false
+            }
+            override fun onQueryTextChange(query: String?): Boolean {
+                if (query != null) {
+                    myListAdapter.filter.filter(query)
+                }
+                return true
+            }
+        })
+        return super.onCreateOptionsMenu(menu)
+
+//        return true
     }
 }

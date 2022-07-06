@@ -106,4 +106,7 @@
     <string name="pref_file" translatable="false">preferences</string>
     <string name="pref_key_verified" translatable="false">verified</string>
     <string name="deleteButton">Delete</string>
+    <string name="app_label">search</string>
+    <string name="search_hint">search hint</string>
+    <string name="search_bar_title">Search</string>
 </resources>
