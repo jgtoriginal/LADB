@@ -1,11 +1,9 @@
 package com.draco.ladb.views
 
-import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.text.format.Formatter.formatShortFileSize
-import android.util.Log
 import android.view.Menu
 import android.widget.ListView
 import android.widget.SearchView
@@ -21,17 +19,21 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
+
 data class AppRow(
     val title:String,
     val description:String,
     val imageId:Drawable,
     val packageId:String,
 )
+
 class MainActivity : AppCompatActivity() {
     private lateinit var listView: ListView
     private val viewModel: MainActivityViewModel by viewModels()
     private lateinit var list: MutableList<PackageInfo>
     private lateinit var myListAdapter: AppListAdapter
+    private var appList = listOf<AppRow>()
+    private var appListImmutable = listOf<AppRow>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,8 +62,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun installedApps(list: List<PackageInfo>) {
-        var appList = arrayOf<AppRow>()
-
         for (i in list.indices) {
             val packageInfo = list[i]
 //            if (packageInfo!!.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM == 0) {
@@ -77,13 +77,14 @@ class MainActivity : AppCompatActivity() {
                 val imageId = packageInfo.applicationInfo.loadIcon(packageManager)
                 val packageId = packageInfo.applicationInfo.packageName.toString()
 
-                if(pkgName.contains("contact")) {
+//                if(pkgName.contains("contact")) {
                     appList += AppRow(title, description, imageId, packageId)
-                }
+                    appListImmutable += AppRow(title, description, imageId, packageId)
+//                }
             }
         }
 
-        myListAdapter = AppListAdapter(this, appList, ::deleteApp)
+        myListAdapter = AppListAdapter(this, appList, appListImmutable, ::deleteApp)
         listView.adapter = myListAdapter
     }
 
@@ -95,17 +96,20 @@ class MainActivity : AppCompatActivity() {
         searchView.queryHint = "Search"
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
+                myListAdapter.filter.filter(query)
                 return false
             }
             override fun onQueryTextChange(query: String?): Boolean {
-                if (query != null) {
-                    myListAdapter.filter.filter(query)
-                }
+                myListAdapter.filter.filter(query)
                 return true
             }
-        })
-        return super.onCreateOptionsMenu(menu)
 
-//        return true
+        })
+
+        searchView.setOnCloseListener {
+            false
+        }
+
+        return super.onCreateOptionsMenu(menu)
     }
 }

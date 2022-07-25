@@ -1,15 +1,16 @@
 package com.draco.ladb.views
 
 import android.app.Activity
-import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import com.draco.ladb.R
 
+
 class AppListAdapter(
     private val context: Activity,
-    private val appList: Array<AppRow>,
+    private val appList: List<AppRow>,
+    private val appListImmutable: List<AppRow>,
     private val deleteApp: (input: String, position: Int) -> Unit
 )
     : ArrayAdapter<AppRow>(context, R.layout.list_row, appList) {
@@ -36,7 +37,67 @@ class AppListAdapter(
         return rowView
     }
 
-    fun filter(searchText: String) {
-        appList.filter { e -> searchText.lowercase() in e.title.lowercase() }
+    override fun getFilter(): Filter {
+        return AppsFilter<AppRow>(appList, appListImmutable, this)
     }
+
+//    override fun getFilter(): Filter {
+//        return filter
+//    }
+
+
+    fun filterResults(searchText: String) {
+       appList.filter { e -> searchText.lowercase() in e.title.lowercase() }
+    }
+}
+
+class AppsFilter<T>(appList: List<AppRow>, appListImmutable: List<AppRow>, appListAdapter: AppListAdapter): Filter() {
+
+    private val appList = appList
+    var myListAdapter: AppListAdapter? = appListAdapter
+
+    private var sourceObjects = appListImmutable
+
+
+    override fun performFiltering(constraint: CharSequence?): FilterResults {
+        val filterSeq: String = constraint.toString().lowercase()
+        val result = FilterResults()
+        if (filterSeq.isNotEmpty()) {
+            val filter = ArrayList<AppRow>()
+            for (i in appList.indices) {
+                // the filtering itself:
+                if (appList[i].title.lowercase().contains(filterSeq)) {
+                    filter.add(appList[i])
+                }
+            }
+            result.count = filter.size
+            result.values = filter
+        } else {
+            // add all objects
+            synchronized(this) {
+                result.values = sourceObjects
+                result.count = sourceObjects.size
+            }
+            result.values = sourceObjects
+            result.count = sourceObjects.size
+        }
+
+        return result
+    }
+
+    override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
+            val filtered = results!!.values as ArrayList<T>
+            myListAdapter?.notifyDataSetChanged()
+            myListAdapter?.clear()
+
+            var i = 0
+            val l: Int = filtered.size
+            while (i < l) {
+                myListAdapter?.add(filtered[i] as AppRow)
+                i++
+            }
+
+            myListAdapter?.notifyDataSetInvalidated()
+    }
+
 }
