@@ -28,13 +28,16 @@ class AppsAdapter(
     private val refreshCallback: () -> Unit
 ) : RecyclerView.Adapter<AppsAdapter.AppViewHolder>() {
 
+    // This will hold the filtered list of apps
+    private var filteredAppsList: List<AppInfo> = appsList
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AppViewHolder {
         val itemView = LayoutInflater.from(parent.context).inflate(R.layout.item_app, parent, false)
         return AppViewHolder(itemView)
     }
 
     override fun onBindViewHolder(holder: AppViewHolder, position: Int) {
-        val appInfo = appsList[position]
+        val appInfo = filteredAppsList[position]
         val appTitle = if (appInfo.isSystemApp) {
             "${appInfo.appName} - SYSTEM"
         } else {
@@ -49,9 +52,26 @@ class AppsAdapter(
         }
     }
 
+    // Method to update the list of apps
+    fun updateList(newList: List<AppInfo>) {
+        appsList = newList
+        filteredAppsList = newList
+        notifyDataSetChanged()
+    }
 
-    // Assuming this is within an Activity or a Fragment
-    fun showConfirmationDialog(context: Context, packageName: String, isSystemApp: Boolean) {
+    // Method to filter the list of apps based on the search query
+    fun filter(query: String?) {
+        filteredAppsList = if (query.isNullOrEmpty()) {
+            appsList
+        } else {
+            appsList.filter {
+                it.appName.contains(query, ignoreCase = true)
+            }
+        }
+        notifyDataSetChanged()
+    }
+
+    private fun showConfirmationDialog(context: Context, packageName: String, isSystemApp: Boolean) {
         val builder = AlertDialog.Builder(context)
         builder.setTitle("Confirm Action")
         builder.setMessage("Are you sure you want to delete this app?")
@@ -73,12 +93,7 @@ class AppsAdapter(
     }
 
     override fun getItemCount(): Int {
-        return appsList.size
-    }
-
-    fun updateList(newList: List<AppInfo>) {
-        appsList = newList
-        notifyDataSetChanged()
+        return filteredAppsList.size
     }
 
     class AppViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
