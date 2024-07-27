@@ -9,7 +9,7 @@ android {
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.draco.ladb"
+        applicationId "com.debloat.xyz"
         minSdk 26
         targetSdk 34
         versionCode 47
