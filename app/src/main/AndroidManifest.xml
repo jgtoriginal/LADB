@@ -3,6 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:installLocation="internalOnly">
 
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
     <uses-feature
         android:name="android.software.leanback"
         android:required="false" />

@@ -101,4 +101,11 @@
     <string name="licenses_key">licenses</string>
 
     <string name="pref_key_verified" translatable="false">verified</string>
+
+    <string name="title_home">Home</string>
+    <string name="title_dashboard">Dashboard</string>
+    <string name="title_notifications">Notifications</string>
+    <string name="delete_icon">Delete</string>
+    <string name="app_icon">App Icon</string>
+    <string name="trash_icon">Uninstall</string>
 </resources>

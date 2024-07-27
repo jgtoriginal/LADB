@@ -1,11 +1,8 @@
 package com.draco.ladb.viewmodels
 
-import android.app.Activity
 import android.app.Application
-import android.content.Intent
-import android.net.Uri
+import android.content.Context
 import android.os.Build
-import android.os.Parcelable
 import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
@@ -53,7 +50,7 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
      *
      * @param activity Activity to use when showing the error
      */
-    fun piracyCheck(activity: Activity) {
+    fun piracyCheck(activity: Context) {
         if (checker != null || !BuildConfig.ANTI_PIRACY)
             return
 
