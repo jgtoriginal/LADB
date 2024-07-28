@@ -13,6 +13,7 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import androidx.recyclerview.widget.RecyclerView
+import com.draco.ladb.BuildConfig
 import com.draco.ladb.R
 import com.draco.ladb.databinding.ActivityMainBinding
 import com.draco.ladb.fragments.home.HomeFragment
@@ -61,15 +62,24 @@ class MainActivity : AppCompatActivity() {
             val screenHeight = rootView.rootView.height
             val keypadHeight = screenHeight - r.bottom
 
-            if (keypadHeight > screenHeight * 0.15) {
-                // Keyboard is open
+            /** WIP: hiding tabs for now.
+             * not showing all tabs to end users for now
+             * */
+
+            if (BuildConfig.DEBUG) {
+                if (keypadHeight > screenHeight * 0.15) {
+                    // Keyboard is open
+                    navView.visibility = View.GONE
+                    updateRecyclerViewMargin(recyclerView, 0)
+                } else {
+                    // Keyboard is closed
+                    navView.visibility = View.VISIBLE
+                    val actionBarSize = getActionBarSize()
+                    updateRecyclerViewMargin(recyclerView, actionBarSize)
+                }
+            } else {
                 navView.visibility = View.GONE
                 updateRecyclerViewMargin(recyclerView, 0)
-            } else {
-                // Keyboard is closed
-                navView.visibility = View.VISIBLE
-                val actionBarSize = getActionBarSize()
-                updateRecyclerViewMargin(recyclerView, actionBarSize)
             }
         }
 
