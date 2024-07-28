@@ -2,6 +2,7 @@ package com.draco.ladb.views
 
 import android.graphics.Rect
 import android.os.Bundle
+import android.util.Log
 import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
@@ -14,6 +15,7 @@ import androidx.navigation.ui.setupWithNavController
 import androidx.recyclerview.widget.RecyclerView
 import com.draco.ladb.R
 import com.draco.ladb.databinding.ActivityMainBinding
+import com.draco.ladb.fragments.home.HomeFragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class MainActivity : AppCompatActivity() {
@@ -49,6 +51,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupKeyboardVisibilityListener(navView: BottomNavigationView) {
+
         val rootView = findViewById<View>(android.R.id.content)
         val recyclerView = findViewById<RecyclerView>(R.id.recycler_view)
 

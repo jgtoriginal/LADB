@@ -43,9 +43,14 @@ class HomeFragment : Fragment() {
         val recyclerView = binding.recyclerView
         val searchView = binding.searchView
 
-        // Set background color of the entire SearchView
-        val greenColor = ContextCompat.getColor(requireContext(), R.color.green)
-        searchView.setBackgroundColor(greenColor)
+        val currentNightMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+
+        if (currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_NO) {
+            val greenColor = ContextCompat.getColor(requireContext(), R.color.green)
+            searchView.setBackgroundColor(greenColor)
+        } else {
+            searchView.setBackgroundColor(Color.TRANSPARENT)
+        }
 
         val searchTextView = searchView.findViewById<EditText>(androidx.appcompat.R.id.search_src_text)
         searchTextView.setTextColor(Color.WHITE) // Set the query text color to white
