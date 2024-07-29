@@ -3,13 +3,20 @@ package com.draco.ladb.fragments.home
 import android.app.AlertDialog
 import android.content.Context
 import android.content.DialogInterface
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
+import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.draco.ladb.R
 
@@ -94,6 +101,48 @@ class AppsAdapter(
 
     override fun getItemCount(): Int {
         return filteredAppsList.size
+    }
+
+    /** To be used when phone is not listening on port 5555 */
+    private fun uninstallOrDisableApp(packageName: String, isSystemApp: Boolean) {
+
+
+        if (isSystemApp) {
+            try {
+                Log.d("AppsAdapter", "Attempting to disable app: $packageName")
+                val disableIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.parse("package:$packageName")
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                if (disableIntent.resolveActivity(packageManager) != null) {
+                    ContextCompat.startActivity(context, disableIntent, null)
+                } else {
+                    Log.e("AppsAdapter", "Disable intent could not be resolved for: $packageName")
+                }
+            } catch (e: Exception) {
+                Log.e("AppsAdapter", "Disable failed for: $packageName", e)
+                e.printStackTrace()
+            }
+        } else {
+            try {
+                Log.d("AppsAdapter", "Attempting to uninstall app: $packageName")
+                val uninstallIntent = Intent(Intent.ACTION_DELETE).apply {
+                    data = Uri.parse("package:$packageName")
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                ContextCompat.startActivity(context, uninstallIntent, null)
+                Handler(Looper.getMainLooper()).postDelayed({
+                    Log.d("AppsAdapter", "Refreshing app list after uninstallation attempt")
+                    refreshCallback()
+                }, 2000) // Adjust the delay as needed
+            } catch (e: Exception) {
+                Log.e("AppsAdapter", "Uninstall failed for: $packageName", e)
+
+            }
+        }
+
+
+
     }
 
     class AppViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
