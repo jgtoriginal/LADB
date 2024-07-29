@@ -25,6 +25,7 @@ import androidx.preference.PreferenceManager
 import com.draco.ladb.BuildConfig
 import com.draco.ladb.R
 import com.draco.ladb.databinding.FragmentDashboardBinding
+import com.draco.ladb.viewmodels.DashboardViewModel
 import com.draco.ladb.viewmodels.MainActivityViewModel
 import com.draco.ladb.views.HelpActivity
 import com.draco.ladb.views.BookmarksActivity
@@ -35,14 +36,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class DashboardFragment : Fragment() {
-    private val viewModel: MainActivityViewModel by viewModels()
+    // ViewModel for the activity
+    private val viewModel: DashboardViewModel by viewModels()
+    // View binding for the fragment
     private var _binding: FragmentDashboardBinding? = null
     private val binding get() = _binding!!
 
+    // Dialog for pairing
     private lateinit var pairDialog: MaterialAlertDialogBuilder
 
+    // Last command entered by the user
     private var lastCommand = ""
 
+    // Register a result callback for the bookmark activity
     private val bookmarkGetResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         val text = it.data?.getStringExtra(Intent.EXTRA_TEXT) ?: return@registerForActivityResult
         binding.command.setText(text)
@@ -51,20 +57,22 @@ class DashboardFragment : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
+        // Inflate the layout and initialize view binding
         _binding = FragmentDashboardBinding.inflate(inflater, container, false)
         val root: View = binding.root
-        setHasOptionsMenu(true)
+        setHasOptionsMenu(true) // Indicate that this fragment has an options menu
 
-        setupUI()
-        setupDataListeners()
+        setupUI() // Set up the UI elements
+        setupDataListeners() // Set up data listeners for LiveData objects
+
+        // If not currently pairing, start the pairing process
         if (viewModel.isPairing.value != true)
             pairAndStart()
-
-//        viewModel.piracyCheck(requireContext())
 
         return root
     }
 
+    // Set up the UI components and event listeners
     private fun setupUI() {
         pairDialog = MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.pair_title)
@@ -74,18 +82,20 @@ class DashboardFragment : Fragment() {
             .setNegativeButton(R.string.help, null)
             .setNeutralButton(R.string.skip, null)
 
+        // Handle enter key events for the command input
         binding.command.setOnKeyListener { _, keyCode, keyEvent ->
             if (keyCode == KeyEvent.KEYCODE_ENTER && keyEvent.action == KeyEvent.ACTION_DOWN) {
-                sendCommandToADB()
+                sendCommandToADB() // Send command when enter is pressed
                 return@setOnKeyListener true
             } else {
                 return@setOnKeyListener false
             }
         }
 
+        // Handle editor action events (such as IME_ACTION_SEND) for the command input
         binding.command.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEND) {
-                sendCommandToADB()
+                sendCommandToADB() // Send command when IME_ACTION_SEND is triggered
                 return@setOnEditorActionListener true
             } else {
                 return@setOnEditorActionListener false
@@ -93,47 +103,51 @@ class DashboardFragment : Fragment() {
         }
     }
 
+    // Send the command entered in the input field to ADB
     private fun sendCommandToADB() {
         val text = binding.command.text.toString()
         lastCommand = text
-        binding.command.text = null
+        binding.command.text = null // Clear the input field
         lifecycleScope.launch(Dispatchers.IO) {
-            viewModel.adb.sendToShellProcess(text)
+            viewModel.adb.sendToShellProcess(text) // Send the command in a background thread
         }
     }
 
+    // Set the UI state based on whether the input is ready
     private fun setReadyForInput(ready: Boolean) {
-        binding.command.isEnabled = ready
+        binding.command.isEnabled = ready // Enable/disable the command input field
         binding.commandContainer.hint =
             if (ready) getString(R.string.command_hint) else getString(R.string.command_hint_waiting)
-        binding.progress.visibility = if (ready) View.INVISIBLE else View.VISIBLE
+        binding.progress.visibility = if (ready) View.INVISIBLE else View.VISIBLE // Show/hide progress bar
     }
 
+    // Set up listeners for LiveData objects in the ViewModel
     private fun setupDataListeners() {
         /* Update the output text */
         viewModel.outputText.observe(viewLifecycleOwner) { newText ->
-            binding.output.text = newText
+            binding.output.text = newText // Set the output text
             binding.outputScrollview.post {
-                binding.outputScrollview.fullScroll(ScrollView.FOCUS_DOWN)
+                binding.outputScrollview.fullScroll(ScrollView.FOCUS_DOWN) // Scroll to the bottom
                 binding.command.requestFocus()
                 val imm = getSystemService(requireContext(), InputMethodManager::class.java)
-                imm?.showSoftInput(binding.command, InputMethodManager.SHOW_IMPLICIT)
+                imm?.showSoftInput(binding.command, InputMethodManager.SHOW_IMPLICIT) // Show the keyboard
             }
         }
 
         /* Restart the activity on reset */
         viewModel.adb.closed.observe(viewLifecycleOwner) { closed ->
             if (closed == true) {
-                activity?.recreate()
+                activity?.recreate() // Restart the activity if ADB connection is closed
             }
         }
 
         /* Prepare progress bar, pairing latch, and script executing */
         viewModel.adb.started.observe(viewLifecycleOwner) { started ->
-            setReadyForInput(started == true)
+            setReadyForInput(started == true) // Update UI based on whether ADB is started
         }
     }
 
+    // Start the pairing process if necessary and start the ADB server
     private fun pairAndStart() {
         if (viewModel.needsToPair()) {
             viewModel.adb.debug("Requesting pairing information")
@@ -144,7 +158,7 @@ class DashboardFragment : Fragment() {
                 } else {
                     /* Failed; try again! */
                     viewModel.adb.debug("Failed to pair! Trying again...")
-                    requireActivity().runOnUiThread { pairAndStart() }
+                    requireActivity().runOnUiThread { pairAndStart() } // Retry pairing on the UI thread
                 }
             }
         } else {
@@ -152,11 +166,13 @@ class DashboardFragment : Fragment() {
         }
     }
 
+    // Show a dialog to ask the user for pairing information
     private fun askToPair(callback: ((Boolean) -> (Unit))? = null) {
         pairDialog
             .create()
             .apply {
                 setOnShowListener {
+                    // Handle positive button click
                     getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                         val port = findViewById<TextInputEditText>(R.id.port)!!.text.toString()
                         val code = findViewById<TextInputEditText>(R.id.code)!!.text.toString()
@@ -164,15 +180,16 @@ class DashboardFragment : Fragment() {
 
                         lifecycleScope.launch(Dispatchers.IO) {
                             viewModel.adb.debug("Trying to pair...")
-                            val success = viewModel.adb.pair(port, code)
-                            callback?.invoke(success)
+                            val success = viewModel.adb.pair(port, code) // Try to pair with ADB
+                            callback?.invoke(success) // Invoke callback with the result
                         }
                     }
 
+                    // Handle negative button click
                     getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.tutorial_url)))
                         try {
-                            startActivity(intent)
+                            startActivity(intent) // Open tutorial URL
                         } catch (e: Exception) {
                             e.printStackTrace()
                             Snackbar.make(
@@ -183,6 +200,7 @@ class DashboardFragment : Fragment() {
                         }
                     }
 
+                    // Handle neutral button click
                     getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
                         PreferenceManager.getDefaultSharedPreferences(requireContext()).edit(true) {
                             putBoolean(getString(R.string.auto_shell_key), false)
@@ -195,29 +213,31 @@ class DashboardFragment : Fragment() {
             .show()
     }
 
+    // Inflate the options menu
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         inflater.inflate(R.menu.main, menu)
         super.onCreateOptionsMenu(menu, inflater)
     }
 
+    // Handle options menu item selection
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.bookmarks -> {
                 val intent = Intent(requireContext(), BookmarksActivity::class.java)
                     .putExtra(Intent.EXTRA_TEXT, binding.command.text.toString())
-                bookmarkGetResult.launch(intent)
+                bookmarkGetResult.launch(intent) // Launch bookmarks activity
                 true
             }
 
             R.id.last_command -> {
-                binding.command.setText(lastCommand)
+                binding.command.setText(lastCommand) // Set the last command in the input field
                 binding.command.setSelection(lastCommand.length)
                 true
             }
 
             R.id.more -> {
                 val intent = Intent(requireContext(), HelpActivity::class.java)
-                startActivity(intent)
+                startActivity(intent) // Launch help activity
                 true
             }
 
@@ -232,7 +252,7 @@ class DashboardFragment : Fragment() {
                         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
                         .putExtra(Intent.EXTRA_STREAM, uri)
                         .setType("file/*")
-                    startActivity(intent)
+                    startActivity(intent) // Share the output file
                 } catch (e: Exception) {
                     e.printStackTrace()
                     Snackbar.make(binding.output, getString(R.string.snackbar_intent_failed), Snackbar.LENGTH_SHORT)
@@ -243,7 +263,7 @@ class DashboardFragment : Fragment() {
             }
 
             R.id.clear -> {
-                viewModel.clearOutputText()
+                viewModel.clearOutputText() // Clear the output text
                 true
             }
 
@@ -251,6 +271,7 @@ class DashboardFragment : Fragment() {
         }
     }
 
+    // Clean up resources when the view is destroyed
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

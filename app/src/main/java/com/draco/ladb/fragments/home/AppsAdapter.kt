@@ -105,8 +105,6 @@ class AppsAdapter(
 
     /** To be used when phone is not listening on port 5555 */
     private fun uninstallOrDisableApp(packageName: String, isSystemApp: Boolean) {
-
-
         if (isSystemApp) {
             try {
                 Log.d("AppsAdapter", "Attempting to disable app: $packageName")

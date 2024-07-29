@@ -1,26 +1,42 @@
 package com.draco.ladb.views
 
+import android.app.AlertDialog
+import android.content.Intent
 import android.graphics.Rect
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContentProviderCompat.requireContext
+import androidx.core.content.edit
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
+import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.RecyclerView
 import com.draco.ladb.BuildConfig
 import com.draco.ladb.R
 import com.draco.ladb.databinding.ActivityMainBinding
 import com.draco.ladb.fragments.home.HomeFragment
+import com.draco.ladb.viewmodels.DashboardViewModel
+import com.draco.ladb.viewmodels.MainActivityViewModel
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
+import com.google.android.material.textfield.TextInputEditText
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
-
+    private val viewModel: MainActivityViewModel by viewModels()
     private lateinit var binding: ActivityMainBinding
     private lateinit var globalLayoutListener: ViewTreeObserver.OnGlobalLayoutListener
 
@@ -49,6 +65,9 @@ class MainActivity : AppCompatActivity() {
                 supportActionBar?.show()
             }
         }
+
+        if (viewModel.isPairing.value != true)
+            viewModel.startADBServer()
     }
 
     private fun setupKeyboardVisibilityListener(navView: BottomNavigationView) {

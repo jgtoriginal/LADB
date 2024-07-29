@@ -3,7 +3,9 @@ package com.draco.ladb.fragments.home
 import android.graphics.Color
 import android.graphics.PorterDuff
 import android.os.Bundle
+import android.os.Handler
 import android.util.Log
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,21 +16,27 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.draco.ladb.R
 import com.draco.ladb.databinding.FragmentHomeBinding
-import com.draco.ladb.viewmodels.MainActivityViewModel
+import com.draco.ladb.fragments.home.HomeViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-import com.draco.ladb.R
 
 class HomeFragment : Fragment() {
+
     private val viewModel: HomeViewModel by viewModels()
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
     private lateinit var appsAdapter: AppsAdapter
+
+    // Variables for managing the visibility of the "full speed" text
+    private var showRunnable: Runnable? = null
+    private var hideRunnable: Runnable? = null
+    private val handler = Handler()
+    private var isReady: Boolean = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -38,7 +46,19 @@ class HomeFragment : Fragment() {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         val root: View = binding.root
 
-        // Find the SwipeRefreshLayout, RecyclerView, and SearchView
+        // Set up the UI components
+        setupUI()
+
+        // Initialize ADB server
+        viewModel.adb.initServer()
+
+        // Observe LiveData and update the UI
+        setupDataListeners()
+
+        return root
+    }
+
+    private fun setupUI() {
         val swipeRefreshLayout = binding.swipeRefreshLayout
         val recyclerView = binding.recyclerView
         val searchView = binding.searchView
@@ -53,17 +73,14 @@ class HomeFragment : Fragment() {
         }
 
         val searchTextView = searchView.findViewById<EditText>(androidx.appcompat.R.id.search_src_text)
-        searchTextView.setTextColor(Color.WHITE) // Set the query text color to white
+        searchTextView.setTextColor(Color.WHITE)
         searchTextView.setHintTextColor(Color.WHITE)
 
-        // Access the search icon (magnifier)
         val searchIcon = searchView.findViewById<ImageView>(androidx.appcompat.R.id.search_mag_icon)
-        searchIcon.setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN) // Set the icon color to white
+        searchIcon.setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
 
-        // Access the clear button (X icon)
         val closeIcon = searchView.findViewById<ImageView>(androidx.appcompat.R.id.search_close_btn)
         closeIcon.setColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
-
 
         recyclerView.layoutManager = LinearLayoutManager(context)
 
@@ -73,45 +90,63 @@ class HomeFragment : Fragment() {
             requireActivity().packageManager,
             ::deleteApp
         ) {
-            // Callback to refresh the list when an app is uninstalled or disabled
             viewModel.refreshApps()
         }
 
         recyclerView.adapter = appsAdapter
 
-        // Observe the apps LiveData and update the adapter
-        viewModel.apps.observe(viewLifecycleOwner, Observer { appsList ->
-            appsAdapter.updateList(appsList)
-        })
-
-        // Initialize ADB server
-        viewModel.adb.initServer()
-
-        // Set up SwipeRefreshLayout listener
         swipeRefreshLayout.setOnRefreshListener {
-            // Trigger refresh
             viewModel.refreshApps()
-            swipeRefreshLayout.isRefreshing = false // Stop the refresh animation
+            swipeRefreshLayout.isRefreshing = false
         }
 
-        // Set up SearchView listener
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String?): Boolean {
-                return false
-            }
+            override fun onQueryTextSubmit(query: String?): Boolean = false
 
             override fun onQueryTextChange(newText: String?): Boolean {
                 appsAdapter.filter(newText)
                 return true
             }
         })
+    }
 
-        return root
+    private fun setupDataListeners() {
+        viewModel.adb.started.observe(viewLifecycleOwner) { ready ->
+            Log.d("HomeFragment", "Connection readiness changed: $ready")
+            setReadyForInput(ready)
+        }
+
+        viewModel.apps.observe(viewLifecycleOwner, Observer { appsList ->
+            appsAdapter.updateList(appsList)
+        })
+    }
+
+    private fun setReadyForInput(ready: Boolean) {
+        isReady = ready
+
+        if (ready) {
+            // Cancel any previously scheduled hide action
+            hideRunnable?.let { handler.removeCallbacks(it) }
+
+            // Schedule to show the "full speed" text after 1500ms if still ready
+            showRunnable = Runnable {
+                if (isReady) {
+                    binding.fullSpeedText.visibility = View.VISIBLE
+                }
+            }.also { handler.postDelayed(it, 1500) }
+        } else {
+            // Cancel any previously scheduled show action
+            showRunnable?.let { handler.removeCallbacks(it) }
+
+            // Schedule to hide the "full speed" text after 1500ms
+            hideRunnable = Runnable {
+                binding.fullSpeedText.visibility = View.GONE
+            }.also { handler.postDelayed(it, 1500) }
+        }
     }
 
     private fun deleteApp(packageName: String) {
         val cmd = "pm uninstall -k --user 0 $packageName"
-
         Log.d("AppsAdapter", "Attempting to disable app: $packageName")
         lifecycleScope.launch(Dispatchers.IO) {
             viewModel.adb.sendToShellProcess(cmd)
