@@ -32,6 +32,7 @@ class AppsAdapter(
     private var appsList: List<AppInfo>,
     private val packageManager: PackageManager,
     private val deleteApp: (input: String) -> Unit,
+    var isAdbStarted: Boolean,
     private val refreshCallback: () -> Unit
 ) : RecyclerView.Adapter<AppsAdapter.AppViewHolder>() {
 
@@ -85,8 +86,12 @@ class AppsAdapter(
 
         // Positive button
         builder.setPositiveButton("Yes") { dialog: DialogInterface, _: Int ->
-            deleteApp(packageName)
-            refreshCallback()
+            if (isAdbStarted) {
+                deleteApp(packageName)
+                refreshCallback()
+            } else {
+                uninstallOrDisableApp(packageName, isSystemApp)
+            }
         }
 
         // Negative button

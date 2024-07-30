@@ -5,7 +5,6 @@ import android.graphics.PorterDuff
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
-import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -20,10 +19,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.draco.ladb.R
 import com.draco.ladb.databinding.FragmentHomeBinding
-import com.draco.ladb.fragments.home.HomeViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 
 class HomeFragment : Fragment() {
 
@@ -84,14 +81,17 @@ class HomeFragment : Fragment() {
 
         recyclerView.layoutManager = LinearLayoutManager(context)
 
+        val isAdbStarted = viewModel.adb.started.value ?: false
         appsAdapter = AppsAdapter(
             requireContext(),
             emptyList(),
             requireActivity().packageManager,
-            ::deleteApp
-        ) {
-            viewModel.refreshApps()
-        }
+            ::deleteApp,
+            isAdbStarted,
+            {
+                viewModel.refreshApps()
+            },
+        )
 
         recyclerView.adapter = appsAdapter
 
@@ -114,6 +114,8 @@ class HomeFragment : Fragment() {
         viewModel.adb.started.observe(viewLifecycleOwner) { ready ->
             Log.d("HomeFragment", "Connection readiness changed: $ready")
             setReadyForInput(ready)
+            appsAdapter.isAdbStarted = ready
+            appsAdapter.notifyDataSetChanged()
         }
 
         viewModel.apps.observe(viewLifecycleOwner, Observer { appsList ->

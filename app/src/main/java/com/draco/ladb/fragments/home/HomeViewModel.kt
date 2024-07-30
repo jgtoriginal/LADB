@@ -3,13 +3,10 @@ package com.draco.ladb.fragments.home
 import android.app.Application
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-import androidx.fragment.app.viewModels
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.draco.ladb.fragments.home.AppInfo
 import com.draco.ladb.utils.ADB
-import com.draco.ladb.viewmodels.MainActivityViewModel
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val _apps = MutableLiveData<List<AppInfo>>().apply {
