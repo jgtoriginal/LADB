@@ -32,7 +32,6 @@ import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.system.exitProcess
-import androidx.lifecycle.Observer
 
 class MainActivity : AppCompatActivity() {
     private val viewModel: MainActivityViewModel by viewModels()
@@ -75,6 +74,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        val swipeRefreshLayout = binding.swipeRefresh
         val recyclerView = binding.recyclerView
         val searchView = binding.searchView
 
@@ -92,6 +92,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         recyclerView.adapter = appsAdapter
+
+        swipeRefreshLayout.setOnRefreshListener {
+            viewModel.refreshApps()
+            swipeRefreshLayout.isRefreshing = false
+        }
 
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean = false
@@ -117,7 +122,6 @@ class MainActivity : AppCompatActivity() {
         binding.commandContainer.hint =
             if (ready) getString(R.string.command_hint) else getString(R.string.command_hint_waiting)
         binding.progress.visibility = if (ready) View.INVISIBLE else View.VISIBLE
-        binding.fullSpeedText.visibility = if (ready) View.INVISIBLE else View.VISIBLE
     }
 
     private fun setupDataListeners() {
@@ -149,9 +153,9 @@ class MainActivity : AppCompatActivity() {
             appsAdapter.notifyDataSetChanged()
         }
 
-        viewModel.apps.observe(this, Observer { appsList ->
+        viewModel.apps.observe(this) { appsList ->
             appsAdapter.updateList(appsList)
-        })
+        }
     }
 
     private fun pairAndStart() {
