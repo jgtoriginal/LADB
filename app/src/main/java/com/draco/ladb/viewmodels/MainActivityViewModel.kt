@@ -3,6 +3,8 @@ package com.draco.ladb.viewmodels
 import android.app.Activity
 import android.app.Application
 import android.content.Intent
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Parcelable
@@ -15,6 +17,7 @@ import androidx.preference.PreferenceManager
 import com.draco.ladb.BuildConfig
 import com.draco.ladb.R
 import com.draco.ladb.utils.ADB
+import com.draco.ladb.views.AppInfo
 import com.github.javiersantos.piracychecker.PiracyChecker
 import com.github.javiersantos.piracychecker.piracyChecker
 import kotlinx.coroutines.Dispatchers
@@ -23,6 +26,11 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 class MainActivityViewModel(application: Application) : AndroidViewModel(application) {
+    private val _apps = MutableLiveData<List<AppInfo>>().apply {
+        value = getInstalledApps()
+    }
+    val apps: LiveData<List<AppInfo>> = _apps
+
     private val _outputText = MutableLiveData<String>()
     val outputText: LiveData<String> = _outputText
 
@@ -38,6 +46,25 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
         startOutputThread()
     }
 
+    fun refreshApps() {
+        _apps.value = getInstalledApps()
+    }
+
+    private fun getInstalledApps(): List<AppInfo> {
+        val packageManager = getApplication<Application>().packageManager
+        val packages = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
+        val launchableApps = packages.filter { app ->
+            packageManager.getLaunchIntentForPackage(app.packageName) != null
+        }
+        val appList = launchableApps.map {
+            val appName = packageManager.getApplicationLabel(it).toString()
+            val appIcon = packageManager.getApplicationIcon(it.packageName)
+            val isSystemApp = (it.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+            AppInfo(appName, it.packageName, appIcon, isSystemApp)
+        }
+        // Sort apps by appName alphabetically
+        return appList.sortedBy { it.appName }
+    }
 
     fun startADBServer(callback: ((Boolean) -> (Unit))? = null) {
         viewModelScope.launch(Dispatchers.IO) {

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">LADB</string>
+    <string name="app_name">XYZ</string>
 
     <string name="command_hint">Shell command</string>
     <string name="command_hint_waiting">Waiting for connection…</string>
@@ -101,4 +101,12 @@
     <string name="licenses_key">licenses</string>
 
     <string name="pref_key_verified" translatable="false">verified</string>
+
+    <string name="title_home">Home</string>
+    <string name="title_dashboard">Dashboard</string>
+    <string name="title_notifications">Notifications</string>
+    <string name="delete_icon">Delete</string>
+    <string name="app_icon">App Icon</string>
+    <string name="trash_icon">Uninstall</string>
+    <string name="full_speed">Full Speed</string>
 </resources>

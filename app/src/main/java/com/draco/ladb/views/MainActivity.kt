@@ -3,6 +3,7 @@ package com.draco.ladb.views
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.KeyEvent
 import android.view.Menu
 import android.view.MenuItem
@@ -15,10 +16,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SearchView
 import androidx.core.content.FileProvider
 import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.PreferenceManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.draco.ladb.BuildConfig
 import com.draco.ladb.R
 import com.draco.ladb.databinding.ActivityMainBinding
@@ -29,12 +32,14 @@ import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.system.exitProcess
+import androidx.lifecycle.Observer
 
 class MainActivity : AppCompatActivity() {
     private val viewModel: MainActivityViewModel by viewModels()
     private lateinit var binding: ActivityMainBinding
 
     private lateinit var pairDialog: MaterialAlertDialogBuilder
+    private lateinit var appsAdapter: AppsAdapter
 
     private var lastCommand = ""
 
@@ -69,6 +74,33 @@ class MainActivity : AppCompatActivity() {
                 return@setOnEditorActionListener false
             }
         }
+
+        val recyclerView = binding.recyclerView
+        val searchView = binding.searchView
+
+        recyclerView.layoutManager = LinearLayoutManager(this)
+
+        val isAdbStarted = viewModel.adb.started.value ?: false
+        appsAdapter = AppsAdapter(
+            this,
+            emptyList(),
+            packageManager,
+            ::deleteApp,
+            isAdbStarted,
+        ) {
+            viewModel.refreshApps()
+        }
+
+        recyclerView.adapter = appsAdapter
+
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean = false
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                appsAdapter.filter(newText)
+                return true
+            }
+        })
     }
 
     private fun sendCommandToADB() {
@@ -85,6 +117,7 @@ class MainActivity : AppCompatActivity() {
         binding.commandContainer.hint =
             if (ready) getString(R.string.command_hint) else getString(R.string.command_hint_waiting)
         binding.progress.visibility = if (ready) View.INVISIBLE else View.VISIBLE
+        binding.fullSpeedText.visibility = if (ready) View.INVISIBLE else View.VISIBLE
     }
 
     private fun setupDataListeners() {
@@ -112,7 +145,13 @@ class MainActivity : AppCompatActivity() {
         /* Prepare progress bar, pairing latch, and script executing */
         viewModel.adb.started.observe(this) { started ->
             setReadyForInput(started == true)
+            appsAdapter.isAdbStarted = (started == true)
+            appsAdapter.notifyDataSetChanged()
         }
+
+        viewModel.apps.observe(this, Observer { appsList ->
+            appsAdapter.updateList(appsList)
+        })
     }
 
     private fun pairAndStart() {
@@ -248,4 +287,13 @@ class MainActivity : AppCompatActivity() {
         menuInflater.inflate(R.menu.main, menu)
         return true
     }
+
+    private fun deleteApp(packageName: String) {
+        val cmd = "pm uninstall -k --user 0 $packageName"
+        Log.d("AppsAdapter", "Attempting to disable app: $packageName")
+        lifecycleScope.launch(Dispatchers.IO) {
+            viewModel.adb.sendToShellProcess(cmd)
+        }
+    }
+
 }
