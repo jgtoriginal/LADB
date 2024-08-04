@@ -28,6 +28,7 @@
     <string name="contact_url">mailto:tnnijmeh@gmail.com</string>
     <string name="tutorial_url">https://www.xda-developers.com/debloat-your-phone-run-adb-shell-commands-no-root-no-pc
     </string>
+    <string name="pair_old_device_url">https://debloat.xyz/pair</string>
 
     <string name="paired_key">paired</string>
     <string name="port_hint">Port</string>
@@ -35,9 +36,12 @@
     <string name="code_hint">Pairing code</string>
 
     <string name="pair_title">Pairing information</string>
-    <string name="pair_message">You must connect this device to LADB using a pairing code from the \"Wireless
+    <string name="pair_message">You must connect this device to XYZ using a pairing code from the \"Wireless
         debugging\" page in the Developer Settings page. If you have not done this before, click \"Help\" for a
         tutorial.
+    </string>
+    <string name="pair_message_old_devices">
+        In order to uninstall system apps with XYZ you need visit our website and follow the instructions.
     </string>
 
     <string name="settings">Settings</string>

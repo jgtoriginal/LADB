@@ -2,16 +2,18 @@ package com.draco.ladb.views
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.KeyEvent
-import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.Window
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethod
 import android.view.inputmethod.InputMethodManager
 import android.widget.ScrollView
+import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
@@ -29,6 +31,7 @@ import com.draco.ladb.viewmodels.MainActivityViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.system.exitProcess
@@ -47,14 +50,43 @@ class MainActivity : AppCompatActivity() {
         binding.command.setText(text)
     }
 
+    private fun isWirelessDebuggingSupported(): Boolean {
+        // Wireless debugging is supported on Android 11 (API level 30) and higher
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+    }
+
     private fun setupUI() {
+        // Inflate the custom layout
+        val dialogView = layoutInflater.inflate(R.layout.dialog_pair, null)
+
+        // Find the TextView in the custom layout
+        val pairMessageTextView = dialogView.findViewById<TextView>(R.id.pair_message)
+
+        // Modify the TextView's text as needed
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            pairMessageTextView.text = getString(R.string.pair_message_old_devices)
+
+            val portInputLayout = dialogView.findViewById<TextInputEditText>(R.id.port)
+            portInputLayout.visibility = View.GONE
+
+            val portCode = dialogView.findViewById<TextInputEditText>(R.id.code)
+            portCode.visibility = View.GONE
+        } else {
+            pairMessageTextView.text = getString(R.string.pair_message)
+        }
+
         pairDialog = MaterialAlertDialogBuilder(this)
             .setTitle(R.string.pair_title)
             .setCancelable(false)
-            .setView(R.layout.dialog_pair)
+            .setView(dialogView)
             .setPositiveButton(R.string.pair, null)
-            .setNegativeButton(R.string.help, null)
             .setNeutralButton(R.string.skip, null)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            pairDialog.setNegativeButton(R.string.help, null)
+        }
+
+        findViewById<TextView>(R.id.pair_message)?.setText(R.string.pair_message_old_devices)
 
         binding.command.setOnKeyListener { _, keyCode, keyEvent ->
             if (keyCode == KeyEvent.KEYCODE_ENTER && keyEvent.action == KeyEvent.ACTION_DOWN) {
@@ -124,15 +156,23 @@ class MainActivity : AppCompatActivity() {
         binding.progress.visibility = if (ready) View.INVISIBLE else View.VISIBLE
     }
 
+    private fun shouldFocusCommand(): Boolean {
+        // Replace with your own condition to control focus behavior
+        return false
+    }
+
     private fun setupDataListeners() {
         /* Update the output text */
         viewModel.outputText.observe(this) { newText ->
             binding.output.text = newText
-            binding.outputScrollview.post {
-                binding.outputScrollview.fullScroll(ScrollView.FOCUS_DOWN)
-                binding.command.requestFocus()
-                val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-                imm.showSoftInput(binding.command, InputMethod.SHOW_EXPLICIT)
+            // Only request focus and show keyboard if needed, e.g., based on a certain condition
+            if (shouldFocusCommand()) {
+                binding.outputScrollview.post {
+                    binding.outputScrollview.fullScroll(ScrollView.FOCUS_DOWN)
+                    binding.command.requestFocus()
+                    val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+                    imm.showSoftInput(binding.command, InputMethod.SHOW_EXPLICIT)
+                }
             }
         }
 
@@ -178,6 +218,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // the following line is to hide the toolbar
+        supportRequestWindowFeature(Window.FEATURE_NO_TITLE)
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -196,31 +240,51 @@ class MainActivity : AppCompatActivity() {
         pairDialog
             .create()
             .apply {
+
                 setOnShowListener {
-                    getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                        val port = findViewById<TextInputEditText>(R.id.port)!!.text.toString()
-                        val code = findViewById<TextInputEditText>(R.id.code)!!.text.toString()
-                        dismiss()
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                            val port = findViewById<TextInputEditText>(R.id.port)!!.text.toString()
+                            val code = findViewById<TextInputEditText>(R.id.code)!!.text.toString()
+                            dismiss()
 
-                        lifecycleScope.launch(Dispatchers.IO) {
-                            viewModel.adb.debug("Trying to pair...")
-                            val success = viewModel.adb.pair(port, code)
-                            callback?.invoke(success)
+                            lifecycleScope.launch(Dispatchers.IO) {
+                                viewModel.adb.debug("Trying to pair...")
+                                val success = viewModel.adb.pair(port, code)
+                                callback?.invoke(success)
+                            }
                         }
-                    }
 
-                    getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.tutorial_url)))
-                        try {
-                            startActivity(intent)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                            Snackbar.make(
-                                binding.output,
-                                getString(R.string.snackbar_intent_failed),
-                                Snackbar.LENGTH_SHORT
-                            )
-                                .show()
+                        getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
+                            val intent =
+                                Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.tutorial_url)))
+                            try {
+                                startActivity(intent)
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                Snackbar.make(
+                                    binding.output,
+                                    getString(R.string.snackbar_intent_failed),
+                                    Snackbar.LENGTH_SHORT
+                                )
+                                    .show()
+                            }
+                        }
+                    } else {
+                        getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                            val intent =
+                                Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.pair_old_device_url)))
+                            try {
+                                startActivity(intent)
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                Snackbar.make(
+                                    binding.output,
+                                    getString(R.string.snackbar_intent_failed),
+                                    Snackbar.LENGTH_SHORT
+                                )
+                                    .show()
+                            }
                         }
                     }
 
@@ -287,10 +351,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.main, menu)
-        return true
-    }
+//    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+//        menuInflater.inflate(R.menu.main, menu)
+//        return true
+//    }
 
     private fun deleteApp(packageName: String) {
         val cmd = "pm uninstall -k --user 0 $packageName"
