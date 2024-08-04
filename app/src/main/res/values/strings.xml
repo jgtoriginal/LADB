@@ -36,9 +36,9 @@
     <string name="code_hint">Pairing code</string>
 
     <string name="pair_title">Pairing information</string>
-    <string name="pair_message">You must connect this device to XYZ using a pairing code from the \"Wireless
-        debugging\" page in the Developer Settings page. If you have not done this before, click \"Help\" for a
-        tutorial.
+    <string name="pair_message">You need to connect this device to XYZ using a pairing code and port
+        from the "Wireless Debugging" page in the Developer Settings. If you haven't done this before,
+        click "Help" for a tutorial.
     </string>
     <string name="pair_message_old_devices">
         In order to uninstall system apps with XYZ you need visit our website and follow the instructions.
@@ -113,4 +113,6 @@
     <string name="app_icon">App Icon</string>
     <string name="trash_icon">Uninstall</string>
     <string name="full_speed">Full Speed</string>
+    <string name="reset_connection">RESET</string>
+    <string name="search_apps">Search apps</string>
 </resources>

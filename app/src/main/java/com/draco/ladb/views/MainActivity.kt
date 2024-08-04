@@ -109,6 +109,7 @@ class MainActivity : AppCompatActivity() {
         val swipeRefreshLayout = binding.swipeRefresh
         val recyclerView = binding.recyclerView
         val searchView = binding.searchView
+        val resetConnection = binding.resetConnectionLabel
 
         recyclerView.layoutManager = LinearLayoutManager(this)
 
@@ -138,6 +139,20 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
         })
+
+        resetConnection.setOnClickListener {
+            PreferenceManager.getDefaultSharedPreferences(this).edit(commit = true) {
+                putBoolean(getString(R.string.paired_key), false)
+            }
+            restartApp()
+        }
+    }
+
+    private fun restartApp() {
+        val intent = Intent(this, MainActivity::class.java)
+        startActivity(intent)
+        finishAffinity()
+        exitProcess(0)
     }
 
     private fun sendCommandToADB() {
@@ -237,68 +252,95 @@ class MainActivity : AppCompatActivity() {
      * Ask the user to pair
      */
     private fun askToPair(callback: ((Boolean) -> (Unit))? = null) {
-        pairDialog
-            .create()
+        // Inflate the custom layout
+        val dialogView = layoutInflater.inflate(R.layout.dialog_pair, null)
+
+        // Find the TextView in the custom layout
+        val pairMessageTextView = dialogView.findViewById<TextView>(R.id.pair_message)
+
+        // Modify the TextView's text as needed
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            pairMessageTextView.text = getString(R.string.pair_message_old_devices)
+
+            val portInputLayout = dialogView.findViewById<TextInputEditText>(R.id.port)
+            portInputLayout.visibility = View.GONE
+
+            val portCode = dialogView.findViewById<TextInputEditText>(R.id.code)
+            portCode.visibility = View.GONE
+        } else {
+            pairMessageTextView.text = getString(R.string.pair_message)
+        }
+
+        // Create the dialog with the custom view
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.pair_title)
+            .setCancelable(false)
+            .setView(dialogView)
+            .setPositiveButton(R.string.pair, null)
+            .setNeutralButton(R.string.skip, null)
             .apply {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    setNegativeButton(R.string.help, null)
+                }
+            }.create()
 
-                setOnShowListener {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                        getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                            val port = findViewById<TextInputEditText>(R.id.port)!!.text.toString()
-                            val code = findViewById<TextInputEditText>(R.id.code)!!.text.toString()
-                            dismiss()
+        dialog.setOnShowListener {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                    val port = dialogView.findViewById<TextInputEditText>(R.id.port)!!.text.toString()
+                    val code = dialogView.findViewById<TextInputEditText>(R.id.code)!!.text.toString()
+                    dialog.dismiss()
 
-                            lifecycleScope.launch(Dispatchers.IO) {
-                                viewModel.adb.debug("Trying to pair...")
-                                val success = viewModel.adb.pair(port, code)
-                                callback?.invoke(success)
-                            }
-                        }
-
-                        getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
-                            val intent =
-                                Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.tutorial_url)))
-                            try {
-                                startActivity(intent)
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                                Snackbar.make(
-                                    binding.output,
-                                    getString(R.string.snackbar_intent_failed),
-                                    Snackbar.LENGTH_SHORT
-                                )
-                                    .show()
-                            }
-                        }
-                    } else {
-                        getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                            val intent =
-                                Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.pair_old_device_url)))
-                            try {
-                                startActivity(intent)
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                                Snackbar.make(
-                                    binding.output,
-                                    getString(R.string.snackbar_intent_failed),
-                                    Snackbar.LENGTH_SHORT
-                                )
-                                    .show()
-                            }
-                        }
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        viewModel.adb.debug("Trying to pair...")
+                        val success = viewModel.adb.pair(port, code)
+                        callback?.invoke(success)
                     }
+                }
 
-                    getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
-                        PreferenceManager.getDefaultSharedPreferences(context).edit(true) {
-                            putBoolean(getString(R.string.auto_shell_key), false)
-                        }
-                        dismiss()
-                        callback?.invoke(true)
+                dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
+                    val intent =
+                        Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.tutorial_url)))
+                    try {
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        Snackbar.make(
+                            binding.output,
+                            getString(R.string.snackbar_intent_failed),
+                            Snackbar.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            } else {
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                    val intent =
+                        Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.pair_old_device_url)))
+                    try {
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        Snackbar.make(
+                            binding.output,
+                            getString(R.string.snackbar_intent_failed),
+                            Snackbar.LENGTH_SHORT
+                        ).show()
                     }
                 }
             }
-            .show()
+
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                PreferenceManager.getDefaultSharedPreferences(this).edit(true) {
+                    putBoolean(getString(R.string.auto_shell_key), false)
+                }
+                dialog.dismiss()
+                callback?.invoke(true)
+            }
+        }
+
+        dialog.show()
     }
+
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
@@ -363,5 +405,4 @@ class MainActivity : AppCompatActivity() {
             viewModel.adb.sendToShellProcess(cmd)
         }
     }
-
 }
