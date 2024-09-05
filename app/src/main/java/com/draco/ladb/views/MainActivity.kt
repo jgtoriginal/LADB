@@ -64,7 +64,7 @@ class MainActivity : AppCompatActivity() {
 
         // Modify the TextView's text as needed
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            pairMessageTextView.text = getString(R.string.pair_message_old_devices)
+            pairMessageTextView.text = getString(R.string.unsupported_device)
 
             val portInputLayout = dialogView.findViewById<TextInputEditText>(R.id.port)
             portInputLayout.visibility = View.GONE
@@ -86,7 +86,7 @@ class MainActivity : AppCompatActivity() {
             pairDialog.setNegativeButton(R.string.help, null)
         }
 
-        findViewById<TextView>(R.id.pair_message)?.setText(R.string.pair_message_old_devices)
+        findViewById<TextView>(R.id.pair_message)?.setText(R.string.unsupported_device)
 
         binding.command.setOnKeyListener { _, keyCode, keyEvent ->
             if (keyCode == KeyEvent.KEYCODE_ENTER && keyEvent.action == KeyEvent.ACTION_DOWN) {
@@ -260,7 +260,7 @@ class MainActivity : AppCompatActivity() {
 
         // Modify the TextView's text as needed
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            pairMessageTextView.text = getString(R.string.pair_message_old_devices)
+            pairMessageTextView.text = getString(R.string.unsupported_device)
 
             val portInputLayout = dialogView.findViewById<TextInputEditText>(R.id.port)
             portInputLayout.visibility = View.GONE

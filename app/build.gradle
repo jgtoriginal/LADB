@@ -2,6 +2,7 @@ plugins {
     id 'com.android.application'
     id 'kotlin-android'
     id 'com.google.android.gms.oss-licenses-plugin'
+    id 'com.google.gms.google-services' // Add this line
 }
 
 
@@ -73,4 +74,9 @@ dependencies {
     implementation 'androidx.navigation:navigation-ui-ktx:2.7.7'
     implementation 'androidx.navigation:navigation-fragment:2.7.7'
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+
+    // Firebase BOM
+    implementation platform('com.google.firebase:firebase-bom:33.2.0')
+    // Firebase Analytics
+    implementation 'com.google.firebase:firebase-analytics'
 }
