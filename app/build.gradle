@@ -13,7 +13,7 @@ android {
         applicationId "com.debloat.xyz"
         minSdk 26
         targetSdk 34
-        versionCode 47
+        versionCode 48
         versionName "2.4.3"
 
         ndk {
