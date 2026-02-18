@@ -25,6 +25,7 @@ import androidx.preference.PreferenceManager
 import com.draco.ladb.BuildConfig
 import com.draco.ladb.R
 import com.draco.ladb.databinding.FragmentDashboardBinding
+import com.draco.ladb.utils.ValidationUtils
 import com.draco.ladb.viewmodels.DashboardViewModel
 import com.draco.ladb.viewmodels.MainActivityViewModel
 import com.draco.ladb.views.HelpActivity
@@ -174,8 +175,31 @@ class DashboardFragment : Fragment() {
                 setOnShowListener {
                     // Handle positive button click
                     getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                        val port = findViewById<TextInputEditText>(R.id.port)!!.text.toString()
-                        val code = findViewById<TextInputEditText>(R.id.code)!!.text.toString()
+                        val portEditText = findViewById<TextInputEditText>(R.id.port)
+                        val codeEditText = findViewById<TextInputEditText>(R.id.code)
+
+                        // Validate inputs before proceeding
+                        val port = portEditText?.text?.toString() ?: ""
+                        val code = codeEditText?.text?.toString() ?: ""
+
+                        if (!ValidationUtils.isValidPort(port)) {
+                            Snackbar.make(
+                                binding.output,
+                                getString(R.string.snackbar_intent_failed),
+                                Snackbar.LENGTH_SHORT
+                            ).show()
+                            return@setOnClickListener
+                        }
+
+                        if (!ValidationUtils.isValidPairingCode(code)) {
+                            Snackbar.make(
+                                binding.output,
+                                getString(R.string.snackbar_intent_failed),
+                                Snackbar.LENGTH_SHORT
+                            ).show()
+                            return@setOnClickListener
+                        }
+
                         dismiss()
 
                         lifecycleScope.launch(Dispatchers.IO) {

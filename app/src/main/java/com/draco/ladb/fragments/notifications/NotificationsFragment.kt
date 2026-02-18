@@ -33,22 +33,15 @@ class NotificationsFragment : Fragment() {
             textView.text = it
         }
 
+        // DNS settings functionality is disabled pending proper implementation
+        // To enable, add user input validation and UI for DNS server selection
         val buttonSetDns: Button = binding.buttonSetDns
+        buttonSetDns.isEnabled = false
         buttonSetDns.setOnClickListener {
-            setPrivateDns("dns.example.com")  // Replace with your DNS host
+            // Feature not yet implemented - requires user input UI and validation
         }
 
         return root
-    }
-
-    private fun setPrivateDns(dnsHost: String) {
-        try {
-            val resolver: ContentResolver = requireContext().contentResolver
-            Settings.Secure.putString(resolver, "private_dns_mode", "hostname")
-            Settings.Secure.putString(resolver, "private_dns_specifier", dnsHost)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
     }
 
     override fun onDestroyView() {

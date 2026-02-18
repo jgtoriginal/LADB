@@ -13,6 +13,7 @@ import com.draco.ladb.BuildConfig
 import com.draco.ladb.R
 import com.draco.ladb.utils.ADB
 import com.github.javiersantos.piracychecker.PiracyChecker
+import kotlinx.coroutines.delay
 import com.github.javiersantos.piracychecker.piracyChecker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
@@ -79,7 +80,7 @@ class MainActivityViewModel(application: Application) : AndroidViewModel(applica
                 val currentText = _outputText.value
                 if (out != currentText)
                     _outputText.postValue(out)
-                Thread.sleep(ADB.OUTPUT_BUFFER_DELAY_MS)
+                delay(ADB.OUTPUT_BUFFER_DELAY_MS)
             }
         }
     }

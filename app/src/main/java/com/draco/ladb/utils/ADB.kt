@@ -11,6 +11,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.preference.PreferenceManager
 import com.draco.ladb.BuildConfig
 import com.draco.ladb.R
+import kotlinx.coroutines.delay
 import java.io.File
 import java.io.PrintStream
 import java.util.concurrent.TimeUnit
@@ -63,9 +64,9 @@ class ADB(private val context: Context) {
      * Returns the user buffer size if valid, else the default
      */
     fun getOutputBufferSize(): Int {
-        val userValue = sharedPrefs.getString(context.getString(R.string.buffer_size_key), "16384")!!
+        val userValue = sharedPrefs.getString(context.getString(R.string.buffer_size_key), "16384")
         return try {
-            Integer.parseInt(userValue)
+            userValue?.toIntOrNull() ?: MAX_OUTPUT_BUFFER_SIZE
         } catch (_: NumberFormatException) {
             MAX_OUTPUT_BUFFER_SIZE
         }
@@ -88,22 +89,26 @@ class ADB(private val context: Context) {
         if (autoShell) {
             /* Only do wireless debugging steps on compatible versions */
             if (secureSettingsGranted) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !isWirelessDebuggingEnabled()) {
-                    Settings.Global.putInt(
-                        context.contentResolver,
-                        "adb_wifi_enabled",
-                        1
-                    )
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !isWirelessDebuggingEnabled()) {
+                        Settings.Global.putInt(
+                            context.contentResolver,
+                            "adb_wifi_enabled",
+                            1
+                        )
 
-                    Thread.sleep(2_000)
-                } else if (!isUSBDebuggingEnabled()) {
-                    Settings.Global.putInt(
-                        context.contentResolver,
-                        Settings.Global.ADB_ENABLED,
-                        1
-                    )
+                        Thread.sleep(2_000)
+                    } else if (!isUSBDebuggingEnabled()) {
+                        Settings.Global.putInt(
+                            context.contentResolver,
+                            Settings.Global.ADB_ENABLED,
+                            1
+                        )
 
-                    Thread.sleep(2_000)
+                        Thread.sleep(2_000)
+                    }
+                } catch (e: Exception) {
+                    debug("Error enabling debugging: ${e.message}")
                 }
             }
 
@@ -126,14 +131,20 @@ class ADB(private val context: Context) {
                 }
             }
 
-            adb(false, listOf("start-server")).waitFor()
-            debug("Waiting for device to connect...")
-            debug("This may take a minute")
-            val waitProcess = adb(false, listOf("wait-for-device")).waitFor(1, TimeUnit.MINUTES)
-            if (!waitProcess) {
-                debug("Your device didn't connect to LADB")
-                debug("If a reboot doesn't work, please contact support")
+            try {
+                adb(false, listOf("start-server")).waitFor()
+                debug("Waiting for device to connect...")
+                debug("This may take a minute")
+                val waitProcess = adb(false, listOf("wait-for-device")).waitFor(1, TimeUnit.MINUTES)
+                if (!waitProcess) {
+                    debug("Your device didn't connect to LADB")
+                    debug("If a reboot doesn't work, please contact support")
 
+                    tryingToPair = false
+                    return false
+                }
+            } catch (e: Exception) {
+                debug("Error starting ADB server: ${e.message}")
                 tryingToPair = false
                 return false
             }
@@ -162,8 +173,8 @@ class ADB(private val context: Context) {
             sendToShellProcess("echo 'Entered non-adb shell'")
 
         val startupCommand =
-            sharedPrefs.getString(context.getString(R.string.startup_command_key), "echo 'Success! ※\\(^o^)/※'")!!
-        if (startupCommand.isNotEmpty())
+            sharedPrefs.getString(context.getString(R.string.startup_command_key), "echo 'Success! ※\\(^o^)/※'")
+        if (!startupCommand.isNullOrEmpty())
             sendToShellProcess(startupCommand)
 
         _started.postValue(true)
@@ -183,12 +194,17 @@ class ADB(private val context: Context) {
      */
     fun waitForDeathAndReset() {
         while (true) {
-            shellProcess?.waitFor()
-            _started.postValue(false)
-            debug("Shell is dead, resetting")
-            adb(false, listOf("kill-server")).waitFor()
-            Thread.sleep(3_000)
-            initServer()
+            try {
+                shellProcess?.waitFor()
+                _started.postValue(false)
+                debug("Shell is dead, resetting")
+                adb(false, listOf("kill-server")).waitFor()
+                Thread.sleep(3_000)
+                initServer()
+            } catch (e: Exception) {
+                debug("Error in waitForDeathAndReset: ${e.message}")
+                Thread.sleep(5_000) // Wait longer before retry on error
+            }
         }
     }
 
@@ -196,26 +212,31 @@ class ADB(private val context: Context) {
      * Ask the device to pair on Android 11+ devices
      */
     fun pair(port: String, pairingCode: String): Boolean {
-        val pairShell = adb(false, listOf("pair", "localhost:$port"))
+        return try {
+            val pairShell = adb(false, listOf("pair", "localhost:$port"))
 
-        /* Sleep to allow shell to catch up */
-        Thread.sleep(5000)
+            /* Sleep to allow shell to catch up */
+            Thread.sleep(5000)
 
-        /* Pipe pairing code */
-        PrintStream(pairShell.outputStream).apply {
-            println(pairingCode)
-            flush()
+            /* Pipe pairing code */
+            PrintStream(pairShell.outputStream).apply {
+                println(pairingCode)
+                flush()
+            }
+
+            /* Continue once finished pairing (or 10s elapses) */
+            pairShell.waitFor(10, TimeUnit.SECONDS)
+            pairShell.destroyForcibly().waitFor()
+
+            val killShell = adb(false, listOf("kill-server"))
+            killShell.waitFor(3, TimeUnit.SECONDS)
+            killShell.destroyForcibly()
+
+            pairShell.exitValue() == 0
+        } catch (e: Exception) {
+            debug("Pairing failed: ${e.message}")
+            false
         }
-
-        /* Continue once finished pairing (or 10s elapses) */
-        pairShell.waitFor(10, TimeUnit.SECONDS)
-        pairShell.destroyForcibly().waitFor()
-
-        val killShell = adb(false, listOf("kill-server"))
-        killShell.waitFor(3, TimeUnit.SECONDS)
-        killShell.destroyForcibly()
-
-        return pairShell.exitValue() == 0
     }
 
     /**
@@ -246,18 +267,23 @@ class ADB(private val context: Context) {
                 }
             }
 
-        return processBuilder.start()!!
+        return processBuilder.start()
     }
 
     /**
      * Send commands directly to the shell process
      */
     fun sendToShellProcess(msg: String) {
-        if (shellProcess == null || shellProcess?.outputStream == null)
+        val outputStream = shellProcess?.outputStream
+        if (outputStream == null)
             return
-        PrintStream(shellProcess!!.outputStream!!).apply {
-            println(msg)
-            flush()
+        try {
+            PrintStream(outputStream).apply {
+                println(msg)
+                flush()
+            }
+        } catch (e: Exception) {
+            debug("Error sending command to shell: ${e.message}")
         }
     }
 

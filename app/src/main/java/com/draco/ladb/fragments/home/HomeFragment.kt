@@ -19,6 +19,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.draco.ladb.R
 import com.draco.ladb.databinding.FragmentHomeBinding
+import com.draco.ladb.utils.ValidationUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -148,6 +149,12 @@ class HomeFragment : Fragment() {
     }
 
     private fun deleteApp(packageName: String) {
+        // Validate package name before executing command
+        if (!ValidationUtils.isValidPackageName(packageName)) {
+            Log.e("HomeFragment", "Invalid package name: $packageName")
+            return
+        }
+
         val cmd = "pm uninstall -k --user 0 $packageName"
         Log.d("AppsAdapter", "Attempting to disable app: $packageName")
         lifecycleScope.launch(Dispatchers.IO) {
